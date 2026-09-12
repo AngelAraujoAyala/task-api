@@ -39,3 +39,12 @@ export const deleteTask = (id: number): void => {
   }
   tasks.splice(index, 1);
 };
+
+export const updateTask = (id: number, title: unknown): Task => {
+  const task = findTaskById(id);
+  if (typeof title !== "string" || !title.trim()) {
+    throw new AppError("El campo title es obligatorio.", 400);
+  }
+  task.title = title.trim();
+  return task;
+};

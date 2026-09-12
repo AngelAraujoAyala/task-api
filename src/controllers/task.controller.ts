@@ -5,6 +5,7 @@ import {
   deleteTask,
   findTaskById,
   listTasks,
+  updateTask
 } from "../services/task.service.js";
 import { AppError } from "../errors/app-error.js";
 
@@ -66,6 +67,19 @@ export const removeTask = (
   try {
     deleteTask(parseId(req.params.id));
     res.status(204).send();
+  } catch (error: unknown) {
+    next(error);
+  }
+};
+
+export const patchTaskTitle = (
+  req: Request,
+  res: Response,
+  next: NextFunction,
+): void => {
+  try {
+    const task = updateTask(parseId(req.params.id), req.body.title);
+    res.status(200).json({ data: task });
   } catch (error: unknown) {
     next(error);
   }
