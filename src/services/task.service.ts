@@ -7,14 +7,22 @@ export const listTasks = (): readonly Task[] => tasks;
 export const findTaskById = (id: number): Task => {
   const task = tasks.find((item) => item.id === id);
   if (!task) {
-    throw new AppError(`No existe una tarea con el id ${id}.`, 404);
+    throw new AppError(
+      `No existe una tarea con el id ${id}.`,
+      404,
+      "TASK_NOT_FOUND",
+    );
   }
   return task;
 };
 
 export const createTask = (title: unknown): Task => {
   if (typeof title !== "string" || !title.trim()) {
-    throw new AppError("El campo title es obligatorio.", 400);
+    throw new AppError(
+      "El campo title es obligatorio.",
+      422,
+      "VALIDATION_ERROR",
+    );
   }
   const task: Task = {
     id: Math.max(0, ...tasks.map((item) => item.id)) + 1,
@@ -35,7 +43,11 @@ export const completeTask = (id: number): Task => {
 export const deleteTask = (id: number): void => {
   const index = tasks.findIndex((item) => item.id === id);
   if (index === -1) {
-    throw new AppError(`No existe una tarea con el id ${id}.`, 404);
+    throw new AppError(
+      `No existe una tarea con el id ${id}.`,
+      404,
+      "TASK_NOT_FOUND",
+    );
   }
   tasks.splice(index, 1);
 };
@@ -43,8 +55,18 @@ export const deleteTask = (id: number): void => {
 export const updateTask = (id: number, title: unknown): Task => {
   const task = findTaskById(id);
   if (typeof title !== "string" || !title.trim()) {
-    throw new AppError("El campo title es obligatorio.", 400);
+    throw new AppError(
+      "El campo title es obligatorio.",
+      422,
+      "VALIDATION_ERROR",
+    );
   }
   task.title = title.trim();
+  return task;
+};
+
+export const setTaskCompletion = (id: number, completed: boolean): Task => {
+  const task = findTaskById(id);
+  task.status = "completed";
   return task;
 };
