@@ -4,6 +4,7 @@ import { validateTaskTitle } from "../middlewares/validate-task-title.middleware
 import { requireJson } from "../middlewares/require-json.middleware.js";
 import { validateCompletion } from "../middlewares/validate-completion.middleware.js";
 import { patchTaskStatus } from "../controllers/task.controller.js";
+import { validateTaskDescription } from "../middlewares/validate-task-description.middleware.js";
 import {
   getTask,
   getTasks,
@@ -20,6 +21,13 @@ taskRouter.param("id", validateTaskId);
 taskRouter.get("/", getTasks);
 taskRouter.get("/:id", getTask);
 taskRouter.post("/", requireJson, validateTaskTitle, postTask);
+taskRouter.post(
+  "/",
+  requireJson,
+  validateTaskTitle,
+  validateTaskDescription,
+  postTask,
+);
 taskRouter.patch("/:id", requireJson, validateTaskTitle, patchTaskTitle);
 taskRouter.patch("/:id/complete", patchTaskComplete);
 taskRouter.patch("/:id/status", requireJson, validateCompletion, patchTaskStatus);
