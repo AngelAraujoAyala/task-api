@@ -20,7 +20,6 @@ taskRouter.param("id", validateTaskId);
 
 taskRouter.get("/", getTasks);
 taskRouter.get("/:id", getTask);
-taskRouter.post("/", requireJson, validateTaskTitle, postTask);
 taskRouter.post(
   "/",
   requireJson,
