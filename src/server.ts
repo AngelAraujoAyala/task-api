@@ -1,12 +1,11 @@
-import dns from "dns"
+import dns from "dns";
 dns.setDefaultResultOrder("ipv4first");
 dns.setServers(["8.8.8.8", "8.8.4.4"]);
 
-import "dotenv/config";
 import type { Server } from "node:http";
 import { app } from "./app.js";
 import { connectDatabase, disconnectDatabase } from "./config/database.js";
-import { loadEnvironment } from "./config/env.js";
+import { env } from "./config/env.js";
 
 let isShuttingDown = false;
 
@@ -42,14 +41,13 @@ const shutdown = async (server: Server, signal: string): Promise<void> => {
 
 const startServer = async (): Promise<void> => {
   try {
-    const env = loadEnvironment();
     await connectDatabase({
-      uri: env.mongodbUri,
-      dbName: env.mongodbDbName,
+      uri: env.MONGODB_URI,
+      dbName: env.MONGODB_DB_NAME,
     });
 
-    const server = app.listen(env.port, () => {
-      console.log(`API disponible en http://localhost:${env.port}`);
+    const server = app.listen(env.PORT, () => {
+      console.log(`API disponible en http://localhost:${env.PORT}`);
     });
 
     process.on("SIGINT", () => {
@@ -61,7 +59,7 @@ const startServer = async (): Promise<void> => {
   } catch {
     console.error(
       "No fue posible iniciar la API. Revise MONGODB_URI, " +
-        "el usuario y la lista de acceso de red.",
+      "el usuario y la lista de acceso de red.",
     );
     process.exitCode = 1;
   }
