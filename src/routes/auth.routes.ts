@@ -14,9 +14,12 @@ import {
 
 export const authRouter = Router();
 
+authRouter.post(
+  "/register",
+  authRateLimiter,
+  requireJson,
+  validateRegister,
+  postRegister,
+);
+authRouter.post("/login", authRateLimiter, requireJson, validateLogin, postLogin);
 authRouter.get("/me", authenticate, getMe);
-
-authRouter.use(authRateLimiter);
-
-authRouter.post("/register", requireJson, validateRegister, postRegister);
-authRouter.post("/login", requireJson, validateLogin, postLogin);

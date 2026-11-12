@@ -23,7 +23,6 @@ const isDuplicateKeyError = (error: unknown): boolean =>
 
 const mapPersistenceError = (error: unknown): AppError => {
   if (error instanceof AppError) return error;
-
   if (isDuplicateKeyError(error)) {
     return new AppError(
       "Ya existe una cuenta con ese correo electrónico.",
@@ -31,7 +30,6 @@ const mapPersistenceError = (error: unknown): AppError => {
       "USER_EMAIL_EXISTS",
     );
   }
-
   if (error instanceof mongoose.Error.ValidationError) {
     const details = Object.values(error.errors).map((item) => ({
       field: item.path,
@@ -44,7 +42,6 @@ const mapPersistenceError = (error: unknown): AppError => {
       details,
     );
   }
-
   return new AppError(
     "No fue posible acceder al almacenamiento de usuarios.",
     503,
@@ -69,6 +66,10 @@ export const findUserDocumentByEmail = async (
     if (includePasswordHash) query.select("+passwordHash");
     return query;
   });
+
+export const findUserDocumentById = async (
+  id: string,
+): Promise<UserDocument | null> => execute(async () => UserModel.findById(id));
 
 export const createUserDocument = async (
   data: CreateUserRecord,

@@ -1,9 +1,9 @@
-import { model } from "mongoose";
 import { env } from "../config/env.js";
 import { AppError } from "../errors/app-error.js";
 import type { User } from "../models/user.js";
 import {
   createUserDocument,
+  findUserDocumentById,
   findUserDocumentByEmail,
   type UserDocument,
 } from "../repositories/user.repository.js";
@@ -33,7 +33,6 @@ export const registerUser = async (
 ): Promise<RegisterResult> => {
   const email = input.email.trim().toLowerCase();
   const existing = await findUserDocumentByEmail(email);
-
   if (existing) {
     throw new AppError(
       "Ya existe una cuenta con ese correo electrónico.",
@@ -41,7 +40,6 @@ export const registerUser = async (
       "USER_EMAIL_EXISTS",
     );
   }
-
   const passwordHash = await hashPassword(input.password);
   const document = await createUserDocument({
     name: input.name,
@@ -49,7 +47,6 @@ export const registerUser = async (
     passwordHash,
     role: "user",
   });
-
   return { user: toUser(document) };
 };
 
@@ -58,7 +55,6 @@ export const loginUser = async (input: LoginInput): Promise<LoginResult> => {
   const document = await findUserDocumentByEmail(email, true);
   const passwordHash = document?.passwordHash ?? DUMMY_PASSWORD_HASH;
   const validPassword = await verifyPassword(input.password, passwordHash);
-
   if (!document || !validPassword) {
     throw new AppError(
       "El correo o la contraseña son incorrectos.",
@@ -66,7 +62,6 @@ export const loginUser = async (input: LoginInput): Promise<LoginResult> => {
       "INVALID_CREDENTIALS",
     );
   }
-
   const user = toUser(document);
   return {
     user,
@@ -74,4 +69,16 @@ export const loginUser = async (input: LoginInput): Promise<LoginResult> => {
     tokenType: "Bearer",
     expiresIn: env.JWT_EXPIRES_IN,
   };
+};
+
+export const getAuthenticatedUser = async (userId: string): Promise<User> => {
+  const document = await findUserDocumentById(userId);
+  if (!document) {
+    throw new AppError(
+      "La cuenta asociada al token ya no está disponible.",
+      401,
+      "AUTHENTICATED_USER_NOT_FOUND",
+    );
+  }
+  return toUser(document);
 };

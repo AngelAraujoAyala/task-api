@@ -1,6 +1,9 @@
 import type { Request, Response } from "express";
-import { loginUser, registerUser } from "../services/auth.service.js";
-import { AppError } from "../errors/app-error.js";
+import {
+  getAuthenticatedUser,
+  loginUser,
+  registerUser,
+} from "../services/auth.service.js";
 
 export const postRegister = async (
   _req: Request,
@@ -16,23 +19,12 @@ export const postLogin = async (
   res.status(200).json({ data: await loginUser(res.locals.loginInput) });
 };
 
-export const getMe = (_req: Request, res: Response): void => {
+export const getMe = async (_req: Request, res: Response): Promise<void> => {
   const auth = res.locals.auth;
-
   if (!auth) {
-    throw new AppError(
-      "No existe una identidad autenticada en la solicitud.",
-      401,
-      "AUTHENTICATION_REQUIRED",
-    );
+    throw new Error("La ruta /me requiere el middleware authenticate.");
   }
-
   res.status(200).json({
-    data: {
-      identity: {
-        userId: auth.userId,
-        role: auth.role,
-      },
-    },
+    data: { user: await getAuthenticatedUser(auth.userId) },
   });
 };
