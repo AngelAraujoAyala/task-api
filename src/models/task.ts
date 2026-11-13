@@ -1,10 +1,11 @@
-import { Schema, model } from 'mongoose';
+import { Schema, model, Types } from 'mongoose';
 
 export const TASK_STATUSES = ['pending', 'completed'] as const;
 
 export type TaskStatus = (typeof TASK_STATUSES)[number];
 
 export interface TaskPersistence {
+  userId: Types.ObjectId;
   title: string;
   status: TaskStatus;
   createdAt: Date;
@@ -26,6 +27,12 @@ export interface TaskUpdate {
 
 const taskSchema = new Schema<TaskPersistence>(
   {
+    userId: {
+      type: Schema.Types.ObjectId,
+      ref: 'User',
+      required: [true, 'El usuario es obligatorio.'],
+      index: true
+    },
     title: {
       type: String,
       required: [true, 'El título es obligatorio.'],

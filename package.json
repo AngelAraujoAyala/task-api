@@ -9,6 +9,7 @@
     "build": "tsc",
     "start": "node dist/server.js",
     "role:set": "tsx src/scripts/set-user-role.ts",
+    "task:backfill": "tsx src/scripts/backfill-task-owners.ts",
     "test": "vitest run",
     "test:watch": "vitest",
     "client:dev": "pnpm --dir client dev",

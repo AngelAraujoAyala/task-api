@@ -3,6 +3,7 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 import type { Task } from "../src/models/task.js";
 import type { User } from "../src/models/user.js";
 import type {
+  AccessTokenSubject,
   LoginInput,
   LoginResult,
   RegisterInput,
@@ -20,12 +21,21 @@ const authServiceDoubles = vi.hoisted(() => ({
 }));
 
 const taskServiceDoubles = vi.hoisted(() => ({
-  listTasks: vi.fn<(query: TaskListQuery) => Promise<TaskListResult>>(),
-  findTaskById: vi.fn<(id: string) => Promise<Task>>(),
-  createTask: vi.fn<(title: string) => Promise<Task>>(),
-  updateTask: vi.fn<(id: string, changes: object) => Promise<Task>>(),
-  completeTask: vi.fn<(id: string) => Promise<Task>>(),
-  deleteTask: vi.fn<(id: string) => Promise<void>>(),
+  listTasks:
+    vi.fn<
+      (query: TaskListQuery, auth: AccessTokenSubject) => Promise<TaskListResult>
+    >(),
+  findTaskById:
+    vi.fn<(id: string, auth: AccessTokenSubject) => Promise<Task>>(),
+  createTask: vi.fn<(title: string, userId: string) => Promise<Task>>(),
+  updateTask:
+    vi.fn<
+      (id: string, changes: object, auth: AccessTokenSubject) => Promise<Task>
+    >(),
+  completeTask:
+    vi.fn<(id: string, auth: AccessTokenSubject) => Promise<Task>>(),
+  deleteTask:
+    vi.fn<(id: string, auth: AccessTokenSubject) => Promise<void>>(),
 }));
 
 vi.mock("../src/services/auth.service.js", () => authServiceDoubles);
@@ -162,14 +172,17 @@ describe("CRUD protegido y autorización", () => {
       .set("Authorization", `Bearer ${userToken}`)
       .expect(200);
     expect(list.body.data).toHaveLength(1);
-    expect(taskServiceDoubles.listTasks).toHaveBeenCalledWith({
-      page: 1,
-      limit: 10,
-      status: "pending",
-      search: "pruebas",
-      sortBy: "title",
-      order: "asc",
-    });
+    expect(taskServiceDoubles.listTasks).toHaveBeenCalledWith(
+      {
+        page: 1,
+        limit: 10,
+        status: "pending",
+        search: "pruebas",
+        sortBy: "title",
+        order: "asc",
+      },
+      { userId: user.id, role: "user" },
+    );
 
     const created = await request(app)
       .post("/api/tasks")
@@ -177,7 +190,54 @@ describe("CRUD protegido y autorización", () => {
       .send({ title: task.title })
       .expect(201);
     expect(created.body.data.title).toBe(task.title);
-    expect(taskServiceDoubles.createTask).toHaveBeenCalledWith(task.title);
+    expect(taskServiceDoubles.createTask).toHaveBeenCalledWith(
+      task.title,
+      user.id,
+    );
+  });
+
+  it("propaga la identidad del token al consultar y modificar tareas", async () => {
+    const userAuth: AccessTokenSubject = { userId: user.id, role: "user" };
+
+    await request(app)
+      .get(`/api/tasks/${task.id}`)
+      .set("Authorization", `Bearer ${userToken}`)
+      .expect(200);
+    expect(taskServiceDoubles.findTaskById).toHaveBeenCalledWith(
+      task.id,
+      userAuth,
+    );
+
+    await request(app)
+      .patch(`/api/tasks/${task.id}`)
+      .set("Authorization", `Bearer ${userToken}`)
+      .send({ title: "Título actualizado" })
+      .expect(200);
+    expect(taskServiceDoubles.updateTask).toHaveBeenCalledWith(
+      task.id,
+      { title: "Título actualizado" },
+      userAuth,
+    );
+
+    await request(app)
+      .patch(`/api/tasks/${task.id}/complete`)
+      .set("Authorization", `Bearer ${userToken}`)
+      .expect(200);
+    expect(taskServiceDoubles.completeTask).toHaveBeenCalledWith(
+      task.id,
+      userAuth,
+    );
+  });
+
+  it("envía el rol admin para que el listado no se limite al dueño", async () => {
+    await request(app)
+      .get("/api/tasks")
+      .set("Authorization", `Bearer ${adminToken}`)
+      .expect(200);
+    expect(taskServiceDoubles.listTasks).toHaveBeenCalledWith(expect.anything(), {
+      userId: admin.id,
+      role: "admin",
+    });
   });
 
   it("mantiene 403 para user y 204 para admin al eliminar", async () => {
@@ -192,7 +252,10 @@ describe("CRUD protegido y autorización", () => {
       .delete(`/api/tasks/${task.id}`)
       .set("Authorization", `Bearer ${adminToken}`)
       .expect(204);
-    expect(taskServiceDoubles.deleteTask).toHaveBeenCalledWith(task.id);
+    expect(taskServiceDoubles.deleteTask).toHaveBeenCalledWith(task.id, {
+      userId: admin.id,
+      role: "admin",
+    });
   });
 });
 

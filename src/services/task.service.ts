@@ -1,5 +1,6 @@
 import type { HydratedDocument } from 'mongoose';
 import { AppError } from '../errors/app-error.js';
+import type { AccessTokenSubject } from '../models/auth.js';
 import {
   type Task,
   type TaskPersistence,
@@ -22,10 +23,14 @@ const toTask = (document: HydratedDocument<TaskPersistence>): Task => ({
   updatedAt: document.updatedAt
 });
 
+const ownerScope = (auth: AccessTokenSubject): string | undefined =>
+  auth.role === 'admin' ? undefined : auth.userId;
+
 export const listTasks = async (
-  query: TaskListQuery
+  query: TaskListQuery,
+  auth: AccessTokenSubject
 ): Promise<TaskListResult> => {
-  const { documents, total } = await findTaskDocuments(query);
+  const { documents, total } = await findTaskDocuments(query, ownerScope(auth));
   const totalPages = Math.ceil(total / query.limit);
   return {
     data: documents.map(toTask),
@@ -40,35 +45,44 @@ export const listTasks = async (
   };
 };
 
-export const findTaskById = async (id: string): Promise<Task> => {
-  const document = await findTaskDocumentById(id);
+export const findTaskById = async (
+  id: string,
+  auth: AccessTokenSubject
+): Promise<Task> => {
+  const document = await findTaskDocumentById(id, ownerScope(auth));
   if (!document) {
     throw new AppError(`No existe una tarea con el id ${id}.`, 404, 'TASK_NOT_FOUND');
   }
   return toTask(document);
 };
 
-export const createTask = async (title: string): Promise<Task> => {
-  const document = await createTaskDocument(title);
+export const createTask = async (title: string, userId: string): Promise<Task> => {
+  const document = await createTaskDocument(title, userId);
   return toTask(document);
 };
 
 export const updateTask = async (
   id: string,
-  changes: TaskUpdate
+  changes: TaskUpdate,
+  auth: AccessTokenSubject
 ): Promise<Task> => {
-  const document = await updateTaskDocument(id, changes);
+  const document = await updateTaskDocument(id, changes, ownerScope(auth));
   if (!document) {
     throw new AppError(`No existe una tarea con el id ${id}.`, 404, 'TASK_NOT_FOUND');
   }
   return toTask(document);
 };
 
-export const completeTask = async (id: string): Promise<Task> =>
-  updateTask(id, { status: 'completed' });
+export const completeTask = async (
+  id: string,
+  auth: AccessTokenSubject
+): Promise<Task> => updateTask(id, { status: 'completed' }, auth);
 
-export const deleteTask = async (id: string): Promise<void> => {
-  const document = await deleteTaskDocument(id);
+export const deleteTask = async (
+  id: string,
+  auth: AccessTokenSubject
+): Promise<void> => {
+  const document = await deleteTaskDocument(id, ownerScope(auth));
   if (!document) {
     throw new AppError(`No existe una tarea con el id ${id}.`, 404, 'TASK_NOT_FOUND');
   }

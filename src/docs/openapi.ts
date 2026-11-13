@@ -163,7 +163,9 @@ export const openApiDocument: Record<string, unknown> = {
     "/api/tasks": {
       get: {
         tags: ["Tasks"],
-        summary: "Listar tareas con paginación, filtros y ordenamiento",
+        summary: "Listar las tareas del usuario autenticado",
+        description:
+          "El rol user solo recibe sus propias tareas; el rol admin recibe todas.",
         security: [{ bearerAuth: [] }],
         parameters: [
           { $ref: "#/components/parameters/Page" },
@@ -218,6 +220,8 @@ export const openApiDocument: Record<string, unknown> = {
       get: {
         tags: ["Tasks"],
         summary: "Consultar una tarea",
+        description:
+          "Solo el dueño de la tarea o un administrador puede consultarla.",
         security: [{ bearerAuth: [] }],
         responses: {
           "200": {
@@ -236,6 +240,8 @@ export const openApiDocument: Record<string, unknown> = {
       patch: {
         tags: ["Tasks"],
         summary: "Modificar título o estado de una tarea",
+        description:
+          "Solo el dueño de la tarea o un administrador puede modificarla.",
         security: [{ bearerAuth: [] }],
         requestBody: {
           required: true,
@@ -277,6 +283,8 @@ export const openApiDocument: Record<string, unknown> = {
       patch: {
         tags: ["Tasks"],
         summary: "Marcar una tarea como completada",
+        description:
+          "Solo el dueño de la tarea o un administrador puede completarla.",
         security: [{ bearerAuth: [] }],
         parameters: [{ $ref: "#/components/parameters/TaskId" }],
         responses: {

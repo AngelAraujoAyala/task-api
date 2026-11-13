@@ -21,8 +21,16 @@ export interface TaskPageDocuments {
 const escapeRegex = (value: string): string =>
   value.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
 
-const buildFilter = (query: TaskListQuery): FilterQuery<TaskPersistence> => {
-  const filter: FilterQuery<TaskPersistence> = {};
+const ownerFilter = (ownerId?: string): FilterQuery<TaskPersistence> =>
+  ownerId === undefined
+    ? {}
+    : { userId: ownerId as unknown as TaskPersistence['userId'] };
+
+const buildFilter = (
+  query: TaskListQuery,
+  ownerId?: string
+): FilterQuery<TaskPersistence> => {
+  const filter: FilterQuery<TaskPersistence> = { ...ownerFilter(ownerId) };
   if (query.status !== undefined) filter.status = query.status;
   if (query.search !== undefined) {
     filter.title = { $regex: new RegExp(escapeRegex(query.search), 'i') };
@@ -65,9 +73,10 @@ const execute = async <T>(operation: () => Promise<T>): Promise<T> => {
 };
 
 export const findTaskDocuments = async (
-  query: TaskListQuery
+  query: TaskListQuery,
+  ownerId?: string
 ): Promise<TaskPageDocuments> => execute(async () => {
-  const filter = buildFilter(query);
+  const filter = buildFilter(query, ownerId);
   const skip = (query.page - 1) * query.limit;
   const [documents, total] = await Promise.all([
     TaskModel.find(filter)
@@ -80,28 +89,34 @@ export const findTaskDocuments = async (
 });
 
 export const findTaskDocumentById = async (
-  id: string
-): Promise<TaskDocument | null> => execute(async () => TaskModel.findById(id));
+  id: string,
+  ownerId?: string
+): Promise<TaskDocument | null> => execute(async () =>
+  TaskModel.findOne({ _id: id, ...ownerFilter(ownerId) })
+);
 
 export const createTaskDocument = async (
-  title: string
+  title: string,
+  userId: string
 ): Promise<TaskDocument> => execute(async () =>
-  TaskModel.create({ title, status: 'pending' })
+  TaskModel.create({ title, status: 'pending', userId })
 );
 
 export const updateTaskDocument = async (
   id: string,
-  changes: TaskUpdate
+  changes: TaskUpdate,
+  ownerId?: string
 ): Promise<TaskDocument | null> => execute(async () =>
-  TaskModel.findByIdAndUpdate(
-    id,
+  TaskModel.findOneAndUpdate(
+    { _id: id, ...ownerFilter(ownerId) },
     { $set: changes },
     { new: true, runValidators: true }
   )
 );
 
 export const deleteTaskDocument = async (
-  id: string
+  id: string,
+  ownerId?: string
 ): Promise<TaskDocument | null> => execute(async () =>
-  TaskModel.findByIdAndDelete(id)
+  TaskModel.findOneAndDelete({ _id: id, ...ownerFilter(ownerId) })
 );
